@@ -7,14 +7,13 @@ on:
       - main
 
 jobs:
-  check-links:
+  markdown-link-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Install lychee
-        run: cargo install lychee
-
-      - name: Run link checker
-        run: lychee --no-progress "**/*.md"
+    - uses: actions/checkout@master
+    - uses: gaurav-nelson/github-action-markdown-link-check@v1
+      with:
+        use-quiet-mode: 'yes'
+        use-verbose-mode: 'yes'
+        config-file: 'mlc_config.json'
+        max-depth: 2

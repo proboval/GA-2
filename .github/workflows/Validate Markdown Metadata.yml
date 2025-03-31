@@ -1,36 +1,89 @@
 name: Validate Markdown Metadata
-on:
-  pull_request:
-  push:
-    branches:
-      - main
+on: [push, pull_request]
 
 jobs:
   validate-metadata:
-    name: Validate Markdown Metadata
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        
-      - name: Find all Markdown files
-        id: find-files
-        run: |
-          echo "FILES=$(find . -name '*.md' | tr '\n' ' ')" >> $GITHUB_OUTPUT
       
-      - name: Validate metadata
-        uses: mheap/markdown-meta-action@v1
-        id: validate
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          file: ${{ steps.find-files.outputs.FILES }}
-          required: 'tags,date'
+          python-version: '3.10'
           
-      - name: Fail if missing required fields
-        if: steps.validate.outputs.valid != 'true'
+      - name: Install dependencies
+        run: pip install pyyaml python-dateutil
+        
+      - name: Validate metadata
         run: |
-          echo "Error: Some files are missing required metadata fields (tags and date)"
-          echo "Invalid files: ${{ steps.validate.outputs.invalid_files }}"
-          exit 1
+          cat << 'EOF' > validate_metadata.py
+          import yaml
+          from dateutil.parser import parse
+          from glob import glob
+          import sys
           
-      - name: Output success
-        if: steps.validate.outputs.valid == 'true'
-        run: echo "All Markdown files have required metadata (tags and date)"
+          REQUIRED_FIELDS = ['tags', 'date']
+          
+          def validate_date(date_str):
+              try:
+                  parse(date_str)
+                  return True
+              except ValueError:
+                  return False
+          
+          def validate_file(filepath):
+              with open(filepath, 'r', encoding='utf-8') as f:
+                  content = f.read()
+                  
+              if not content.startswith('---'):
+                  print(f"✖ {filepath}: No YAML front matter found")
+                  return False
+                  
+              parts = content.split('---')
+              if len(parts) < 3:
+                  print(f"✖ {filepath}: Invalid front matter format")
+                  return False
+                  
+              try:
+                  meta = yaml.safe_load(parts[1])
+                  if not meta:
+                      print(f"✖ {filepath}: Empty metadata")
+                      return False
+                      
+                  missing_fields = [field for field in REQUIRED_FIELDS if field not in meta]
+                  if missing_fields:
+                      print(f"✖ {filepath}: Missing required fields: {', '.join(missing_fields)}")
+                      return False
+                      
+                  if 'date' in meta and not validate_date(meta['date']):
+                      print(f"✖ {filepath}: Invalid date format")
+                      return False
+                      
+                  if 'tags' in meta and (not isinstance(meta['tags'], list) or len(meta['tags']) == 0):
+                      print(f"✖ {filepath}: Tags must be a non-empty list")
+                      return False
+                      
+                  return True
+                  
+              except yaml.YAMLError as e:
+                  print(f"✖ {filepath}: Invalid YAML - {e}")
+                  return False
+          
+          # Find all Markdown files
+          md_files = glob('**/*.md', recursive=True)
+          errors = 0
+          
+          for file in md_files:
+              if not validate_file(file):
+                  errors += 1
+          
+          if errors > 0:
+              print(f"\n❌ Found {errors} files with invalid metadata")
+              sys.exit(1)
+          else:
+              print("✓ All files have valid metadata")
+              sys.exit(0)
+          EOF
+          
+          python validate_metadata.py

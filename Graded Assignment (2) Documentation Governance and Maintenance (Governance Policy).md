@@ -1,3 +1,8 @@
+---
+tags:
+  - Policy
+date: 31-03-2025
+---
 Saveliy Chertkov
 ### **2. Governance Policy**
 #### 2.1 Roles and Responsibilities

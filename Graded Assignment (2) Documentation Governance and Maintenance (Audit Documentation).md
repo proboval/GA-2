@@ -1,5 +1,5 @@
 Saveliy Chertkov
-[PyTest Documentation](https://app.readthedocs.org/projects/pytest/downloads/pdf/latest/)
+[PyTest Documentation](https://app.readthedocs.org/projects/pytest/downloads/pd/)
 ### **1. Audit Documentation**
 #### 1.1 Outdate information:
 1. **The pytest-pep8 plugin**

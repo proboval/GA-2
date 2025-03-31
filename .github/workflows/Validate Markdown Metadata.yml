@@ -1,0 +1,36 @@
+name: Validate Markdown Metadata
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate-metadata:
+    name: Validate Markdown Metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        
+      - name: Find all Markdown files
+        id: find-files
+        run: |
+          echo "FILES=$(find . -name '*.md' | tr '\n' ' ')" >> $GITHUB_OUTPUT
+      
+      - name: Validate metadata
+        uses: mheap/markdown-meta-action@v1
+        id: validate
+        with:
+          file: ${{ steps.find-files.outputs.FILES }}
+          required: 'tags,date'
+          
+      - name: Fail if missing required fields
+        if: steps.validate.outputs.valid != 'true'
+        run: |
+          echo "Error: Some files are missing required metadata fields (tags and date)"
+          echo "Invalid files: ${{ steps.validate.outputs.invalid_files }}"
+          exit 1
+          
+      - name: Output success
+        if: steps.validate.outputs.valid == 'true'
+        run: echo "All Markdown files have required metadata (tags and date)"
